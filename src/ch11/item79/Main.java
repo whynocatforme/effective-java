@@ -83,11 +83,60 @@ public class Main {
         // 자기 자신이 콜백을 거쳐서 수정하여 ConcurrentModificationException 발생 가능성
         // 다른 스레드에서? 교착상태 빠질 가능성 등...
         // 외계인 메서드 호출을 동기화 블록 바깥으로 옮기기 (CopyOnWriteArrayList 등)
+        // 동기화를 과하게 하면 모든 코어가 메모리를 일관되게 보기 위한 지연시간 & 가상머신의 코드 최적화 방해하여 성능 하락
 
-        concurrent_modification_exception();
+        // concurrent_modification_exception();
 
-        new_thread();
+        // new_thread();
 
-        deadlock();
+        // deadlock();
+
+        concurrent_modification_exception_modified();
+
+        deadlock_modified();
+    }
+
+    private static void deadlock_modified() {
+        Item79_modified.add_callback(callBackList -> {
+            System.out.println("0번 콜백 실행중");
+        });
+
+        Item79_modified.add_callback(callBackList -> {
+            if (callBackList == null) return;
+
+            ExecutorService exec = Executors.newSingleThreadExecutor();
+            try {
+                exec.submit(() -> {
+                    synchronized (callBackList) {
+                        System.out.println(Thread.currentThread() + " lock 획득");
+                        callBackList.remove(1);
+                        System.out.println(Thread.currentThread() + " lock 반환");
+                    }
+                }).get();
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                exec.shutdown();
+            }
+        });
+
+        Item79_modified.add_callback(callBackList -> {
+            System.out.println("2번 콜백 실행중");
+        });
+
+        // 같은 스레드에서 재진입 & 자기자신을 수정
+        Item79_modified.alien_method_call();
+    }
+
+    private static void concurrent_modification_exception_modified() {
+        Item79_modified.add_callback(callBackList -> {
+            if (callBackList == null) return;
+            synchronized (callBackList) {
+                callBackList.remove(0);
+            }
+        });
+
+        // 같은 스레드에서 재진입 & 자기자신을 수정
+        Item79_modified.alien_method_call();
     }
 }
